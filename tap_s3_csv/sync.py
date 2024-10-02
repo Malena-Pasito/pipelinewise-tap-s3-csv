@@ -97,3 +97,43 @@ def sync_table_file(config: Dict, s3_path: str, table_spec: Dict, stream: Dict) 
         records_synced += 1
 
     return records_synced
+
+import json
+import codecs
+
+def get_json_row_iterator(iterable, options=None):
+    LOGGER.info("'*******JSON ITERATOR")
+    """Accepts an iterable, options and returns a generator
+    which yields rows as dictionaries parsed from JSON lines."""
+    options = options or {}
+
+    file_stream = codecs.iterdecode(iterable, encoding='utf-8')
+
+    def json_reader():
+        for line in file_stream:
+            if line.strip():  # Skip empty lines
+                yield json.loads(line.replace('\0', ''))
+
+    reader = json_reader()
+
+    # Collect the first item to infer headers
+    first_item = next(reader)
+    headers = set(first_item.keys())
+
+    if options.get('key_properties'):
+        key_properties = set(options['key_properties'])
+        if not key_properties.issubset(headers):
+            raise Exception('JSON file missing required headers: {}'.format(key_properties - headers))
+
+    if options.get('date_overrides'):
+        date_overrides = set(options['date_overrides'])
+        if not date_overrides.issubset(headers):
+            raise Exception('JSON file missing date_overrides headers: {}'.format(date_overrides - headers))
+
+    # Return an iterator that includes the first item
+    def row_iterator():
+        yield first_item
+        for item in reader:
+            yield item
+
+    return row_iterator()
