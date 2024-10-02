@@ -157,7 +157,8 @@ def sample_file(config: Dict, table_spec: Dict, s3_path: str, sample_rate: int) 
     """
     file_handle = get_file_handle(config, s3_path)
     # _raw_stream seems like the wrong way to access this..
-    iterator = get_row_iterator(file_handle._raw_stream, table_spec)  # pylint:disable=protected-access
+    # iterator = get_row_iterator(file_handle._raw_stream, table_spec)  # pylint:disable=protected-access
+    iterator = get_json_row_iterator(file_handle._raw_stream, table_spec)
 
     current_row = 0
 
